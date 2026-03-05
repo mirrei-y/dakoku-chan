@@ -1,0 +1,23 @@
+{
+    "name": "dakoku-chan",
+    "version": "0.1.0",
+    "description": "Discord bot for clocking in and out",
+    "type": "module",
+    "scripts": {
+        "build": "node scripts/build.mjs",
+        "start": "node --env-file-if-exists=.env dist/dakoku-chan.mjs",
+        "typecheck": "tsc --noEmit"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "Unlicense",
+    "packageManager": "pnpm@10.28.1",
+    "dependencies": {
+        "discord.js": "^14.25.1"
+    },
+    "devDependencies": {
+        "@types/node": "^22.13.5",
+        "esbuild": "^0.27.3",
+        "typescript": "^5.8.2"
+    }
+}
