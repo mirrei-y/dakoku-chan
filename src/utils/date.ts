@@ -127,3 +127,22 @@ export function formatJSTShortDateTime(utcMs: number): string {
     const min = String(minutes).padStart(2, "0");
     return `${m}/${d} ${h}:${min}`;
 }
+
+/**
+ * 「HH:mm」形式の JST 時刻文字列を、基準日の JST 日付に当てはめた UTC ミリ秒に変換します。
+ *
+ * @param timeStr 「HH:mm」形式の時刻文字列
+ * @param baseDateUtcMs 基準となる UTC ミリ秒 (この日付の JST 日付を使用する)
+ * @returns UTC ミリ秒、または不正な形式の場合は `null`
+ */
+export function parseJSTTimeOnDate(timeStr: string, baseDateUtcMs: number): number | null {
+    const match = /^(\d{1,2}):(\d{2})$/.exec(timeStr.trim());
+    if (match === null) return null;
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+
+    const { year, month, day } = getJSTComponents(baseDateUtcMs);
+    return Date.UTC(year, month, day, hours, minutes, 0, 0) - JST_OFFSET_MS;
+}

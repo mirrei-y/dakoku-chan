@@ -2,7 +2,7 @@ import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { AutocompleteInteraction, ChatInputCommandInteraction } from "discord.js";
 import { getUserData, updateEntry } from "../storage.js";
 import type { CommandHandler } from "../types.js";
-import { formatJSTDateTime } from "../utils/date.js";
+import { formatJSTDateTime, parseJSTTimeOnDate } from "../utils/date.js";
 
 /** オートコンプリートで表示するエントリーの最大件数 */
 const AUTOCOMPLETE_MAX = 25;
@@ -24,6 +24,12 @@ export const touchFixCommand: CommandHandler = {
                 .setName("reason")
                 .setDescription("新しい打刻理由 (空にすると理由を削除します)")
                 .setRequired(false),
+        )
+        .addStringOption((option) =>
+            option
+                .setName("time")
+                .setDescription("修正後の打刻時刻 (HH:mm 形式、例: 09:30)")
+                .setRequired(false),
         ),
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -34,6 +40,7 @@ export const touchFixCommand: CommandHandler = {
         // reason が未指定なら undefined、指定されていれば文字列 (空文字で削除)
         const reasonRaw = interaction.options.getString("reason");
         const reason = reasonRaw != null && reasonRaw.trim() !== "" ? reasonRaw.trim() : undefined;
+        const timeRaw = interaction.options.getString("time");
 
         const userData = getUserData(userId);
         const target = userData.entries.find((e) => e.id === entryId);
@@ -42,8 +49,24 @@ export const touchFixCommand: CommandHandler = {
             return;
         }
 
+        // time オプションのパース・バリデーション
+        let newTimestamp: number | undefined;
+        if (timeRaw != null && timeRaw.trim() !== "") {
+            const parsed = parseJSTTimeOnDate(timeRaw, target.timestamp);
+            if (parsed === null) {
+                await interaction.editReply("❌ 時刻の形式が正しくありません。`HH:mm` 形式で入力してください (例: `09:30`)。");
+                return;
+            }
+            if (parsed > Date.now()) {
+                await interaction.editReply("❌ 未来の時刻には修正できません。");
+                return;
+            }
+            newTimestamp = parsed;
+        }
+
         const success = updateEntry(userId, entryId, {
             reason,
+            ...(newTimestamp !== undefined ? { timestamp: newTimestamp } : {}),
             correctedAt: Date.now(),
         });
 
@@ -53,12 +76,17 @@ export const touchFixCommand: CommandHandler = {
         }
 
         const label = target.type === "in" ? "出勤" : "退勤";
-        const timeStr = formatJSTDateTime(target.timestamp);
-        const reasonLine = reason
-            ? `\n> 新しい理由: ${reason}`
-            : "\n> 理由を削除しました。";
+        const originalTimeStr = formatJSTDateTime(target.timestamp);
+        const lines: string[] = [];
+        if (newTimestamp !== undefined) {
+            lines.push(`> 時刻: ${originalTimeStr} → **${formatJSTDateTime(newTimestamp)}**`);
+        }
+        if (reasonRaw != null) {
+            lines.push(reason ? `> 理由: ${reason}` : "> 理由を削除しました。");
+        }
+        const detail = lines.length > 0 ? `\n${lines.join("\n")}` : "";
         await interaction.editReply(
-            `✏️ **${label}** (${timeStr}) を修正しました。${reasonLine}`,
+            `✏️ **${label}** (${originalTimeStr}) を修正しました。${detail}`,
         );
     },
 
