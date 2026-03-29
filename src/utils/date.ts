@@ -113,3 +113,17 @@ export function formatJSTDateTime(utcMs: number): string {
     const min = String(minutes).padStart(2, "0");
     return `${year}/${m}/${d} ${h}:${min}`;
 }
+
+/**
+ * UTC ミリ秒を JST の「MM/DD HH:mm」形式にフォーマットします。
+ * @param utcMs UTC ミリ秒
+ * @returns JST の短縮日時文字列
+ */
+export function formatJSTShortDateTime(utcMs: number): string {
+    const { month, day, hours, minutes } = getJSTComponents(utcMs);
+    const m = String(month + 1);
+    const d = String(day).padStart(2, "0");
+    const h = String(hours).padStart(2, "0");
+    const min = String(minutes).padStart(2, "0");
+    return `${m}/${d} ${h}:${min}`;
+}
