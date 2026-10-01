@@ -29,7 +29,7 @@ interface Period {
 /**
  * 現在時刻から集計対象期間の一覧を生成します。
  * @param now 現在の UTC ミリ秒
- * @returns 期間の一覧 (今日・今週・先週・今月)
+ * @returns 期間の一覧 (今日・今週・先週・今月・先月)
  */
 function buildPeriods(now: number): Period[] {
     const todayStart = startOfJSTDay(now);
@@ -44,6 +44,9 @@ function buildPeriods(now: number): Period[] {
     const thisMonthStart = startOfJSTMonth(now);
     // 翌月の初日を終了とする
     const nextMonthStart = startOfJSTMonth(thisMonthStart + 32 * 24 * 60 * 60 * 1000);
+
+    // thisMonthStart は月初 0:00 のため 1ms 引くと前月末になる
+    const lastMonthStart = startOfJSTMonth(thisMonthStart - 1);
 
     return [
         {
@@ -68,6 +71,12 @@ function buildPeriods(now: number): Period[] {
             label: `今月 (${formatJSTDate(thisMonthStart)} 〜)`,
             start: thisMonthStart,
             end: nextMonthStart,
+            showDate: true,
+        },
+        {
+            label: `先月 (${formatJSTDate(lastMonthStart)} 〜 ${formatJSTDate(thisMonthStart - 1)})`,
+            start: lastMonthStart,
+            end: thisMonthStart,
             showDate: true,
         },
     ];
@@ -124,7 +133,7 @@ function buildFieldValue(result: WorktimeResult, now: number, showDate: boolean)
 export const worktimeCommand: CommandHandler = {
     data: new SlashCommandBuilder()
         .setName("worktime")
-        .setDescription("打刻データから勤務時間を今日・今週・先週・今月で表示します。"),
+        .setDescription("打刻データから勤務時間を今日・今週・先週・今月・先月で表示します。"),
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
